@@ -12,11 +12,7 @@ pipeline {
   }
   // Configuration for the variables used for this specific repo
   environment {
-    BUILDS_DISCORD=credentials('build_webhook_url')
     GITHUB_TOKEN=credentials('TKFBuildBot-GitHub')
-    //GITHUB_TOKEN=credentials('498b4638-2d02-4ce5-832d-8a57d01d97ab')
-    //GITLAB_TOKEN=credentials('b6f0f1dd-6952-4cf6-95d1-9c06380283f0')
-    //GITLAB_NAMESPACE=credentials('gitlab-namespace-id')
     BUILD_VERSION_ARG = 'OS'
     LS_USER = 'linuxserver'
     LS_REPO = 'docker-baseimage-ubuntu'
@@ -285,26 +281,7 @@ pipeline {
         }
       }
     }
-    /* #######################
-           GitLab Mirroring
-       ####################### */
-    // Ping into Gitlab to mirror this repo and have a registry endpoint
-    stage("GitLab Mirror"){
-      when {
-        environment name: 'EXIT_STATUS', value: ''
-      }
-      steps{
-        sh '''curl -H "Content-Type: application/json" -H "Private-Token: ${GITLAB_TOKEN}" -X POST https://gitlab.com/api/v4/projects \
-        -d '{"namespace_id":'${GITLAB_NAMESPACE}',\
-             "name":"'${LS_REPO}'",
-             "mirror":true,\
-             "import_url":"https://github.com/linuxserver/'${LS_REPO}'.git",\
-             "issues_access_level":"disabled",\
-             "merge_requests_access_level":"disabled",\
-             "repository_access_level":"enabled",\
-             "visibility":"public"}' '''
-      } 
-    }
+ 
     /* ###############
        Build Container
        ############### */
@@ -710,31 +687,6 @@ pipeline {
         sh '''curl -H "Authorization: token ${GITHUB_TOKEN}" -X POST https://api.github.com/repos/${LS_USER}/${LS_REPO}/issues/${PULL_REQUEST}/comments \
         -d '{"body": "I am a bot, here are the test results for this PR: \\n'${CI_URL}' \\n'${SHELLCHECK_URL}'"}' '''
       }
-    }
-  }
-  /* ######################
-     Send status to Discord
-     ###################### */
-  post {
-    always {
-      script{
-        if (env.EXIT_STATUS == "ABORTED"){
-          sh 'echo "build aborted"'
-        }
-        else if (currentBuild.currentResult == "SUCCESS"){
-          sh ''' curl -X POST -H "Content-Type: application/json" --data '{"avatar_url": "https://wiki.jenkins-ci.org/download/attachments/2916393/headshot.png","embeds": [{"color": 1681177,\
-                 "description": "**Build:**  '${BUILD_NUMBER}'\\n**CI Results:**  '${CI_URL}'\\n**ShellCheck Results:**  '${SHELLCHECK_URL}'\\n**Status:**  Success\\n**Job:** '${RUN_DISPLAY_URL}'\\n**Change:** '${CODE_URL}'\\n**External Release:**: '${RELEASE_LINK}'\\n**DockerHub:** '${DOCKERHUB_LINK}'\\n"}],\
-                 "username": "Jenkins"}' ${BUILDS_DISCORD} '''
-        }
-        else {
-          sh ''' curl -X POST -H "Content-Type: application/json" --data '{"avatar_url": "https://wiki.jenkins-ci.org/download/attachments/2916393/headshot.png","embeds": [{"color": 16711680,\
-                 "description": "**Build:**  '${BUILD_NUMBER}'\\n**CI Results:**  '${CI_URL}'\\n**ShellCheck Results:**  '${SHELLCHECK_URL}'\\n**Status:**  failure\\n**Job:** '${RUN_DISPLAY_URL}'\\n**Change:** '${CODE_URL}'\\n**External Release:**: '${RELEASE_LINK}'\\n**DockerHub:** '${DOCKERHUB_LINK}'\\n"}],\
-                 "username": "Jenkins"}' ${BUILDS_DISCORD} '''
-        }
-      }
-    }
-    cleanup {
-      cleanWs()
     }
   }
 }
