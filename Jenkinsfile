@@ -183,6 +183,7 @@ pipeline {
       }
     }
     // Run ShellCheck
+    /*
     stage('ShellCheck') {
       when {
         environment name: 'CI', value: 'true'
@@ -211,6 +212,7 @@ pipeline {
         }
       }
     }
+    */
     // Use helper containers to render templated files
     stage('Update-Templates') {
       when {
